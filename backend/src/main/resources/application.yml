@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: smart-service-backend
+  profiles:
+    active: dev
+
+server:
+  port: 8080
+  error:
+    include-message: always
+    include-binding-errors: always

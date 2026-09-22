@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: smartservice-db
+    environment:
+      POSTGRES_DB: smartservicedb
+      POSTGRES_USER: smartuser
+      POSTGRES_PASSWORD: StrongProductionPassword123!
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: smartservice-backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DATABASE_URL: jdbc:postgresql://postgres:5432/smartservicedb
+      DATABASE_USERNAME: smartuser
+      DATABASE_PASSWORD: StrongProductionPassword123!
+      DATABASE_DRIVER: org.postgresql.Driver
+      JPA_DIALECT: org.hibernate.dialect.PostgreSQLDialect
+      JWT_SECRET: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+      ALLOWED_ORIGINS: http://localhost,http://localhost:80,http://localhost:5173
+    depends_on:
+      - postgres
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: smartservice-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  postgres_data:
