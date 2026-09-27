@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,6 +25,7 @@ public class DeviceController {
     private final DeviceService deviceService;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'CUSTOMER')")
     @Operation(summary = "Register a new device")
     public ResponseEntity<ApiResponse<DeviceDTO>> createDevice(@Valid @RequestBody CreateDeviceRequest request) {
         DeviceDTO deviceDTO = deviceService.createDevice(request);
@@ -31,6 +33,7 @@ public class DeviceController {
     }
 
     @GetMapping("/customer/{customerId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'CUSTOMER')")
     @Operation(summary = "Get list of devices owned by a customer")
     public ResponseEntity<ApiResponse<List<DeviceDTO>>> getCustomerDevicesList(@PathVariable Long customerId) {
         List<DeviceDTO> devices = deviceService.getCustomerDevicesList(customerId);
@@ -38,6 +41,7 @@ public class DeviceController {
     }
 
     @GetMapping("/customer/{customerId}/page")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'CUSTOMER')")
     @Operation(summary = "Get paginated devices for a customer")
     public ResponseEntity<ApiResponse<PageResponse<DeviceDTO>>> getCustomerDevices(
             @PathVariable Long customerId,
@@ -47,6 +51,7 @@ public class DeviceController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'CUSTOMER')")
     @Operation(summary = "Get device details by ID")
     public ResponseEntity<ApiResponse<DeviceDTO>> getDeviceById(@PathVariable Long id) {
         DeviceDTO device = deviceService.getDeviceById(id);

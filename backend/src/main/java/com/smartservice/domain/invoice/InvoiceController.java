@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -20,6 +21,7 @@ public class InvoiceController {
     private final InvoiceService invoiceService;
 
     @PostMapping("/job/{jobId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     @Operation(summary = "Generate invoice for a repair job")
     public ResponseEntity<ApiResponse<InvoiceDTO>> generateInvoice(@PathVariable Long jobId) {
         InvoiceDTO dto = invoiceService.generateInvoiceForJob(jobId);
@@ -27,6 +29,7 @@ public class InvoiceController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'CUSTOMER')")
     @Operation(summary = "Get paginated list of invoices")
     public ResponseEntity<ApiResponse<PageResponse<InvoiceDTO>>> getInvoices(
             @RequestParam(required = false) String status,
@@ -37,6 +40,7 @@ public class InvoiceController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'CUSTOMER')")
     @Operation(summary = "Get invoice by ID")
     public ResponseEntity<ApiResponse<InvoiceDTO>> getInvoiceById(@PathVariable Long id) {
         InvoiceDTO dto = invoiceService.getInvoiceById(id);

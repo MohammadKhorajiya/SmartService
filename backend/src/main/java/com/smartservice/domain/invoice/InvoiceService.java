@@ -4,6 +4,8 @@ import com.smartservice.common.dto.PageResponse;
 import com.smartservice.common.exception.ResourceNotFoundException;
 import com.smartservice.common.exception.UnauthorizedAccessException;
 import com.smartservice.common.util.SecurityUtils;
+import com.smartservice.domain.customer.Customer;
+import com.smartservice.domain.customer.CustomerRepository;
 import com.smartservice.domain.estimate.Estimate;
 import com.smartservice.domain.estimate.EstimateItem;
 import com.smartservice.domain.estimate.EstimateRepository;
@@ -29,6 +31,7 @@ public class InvoiceService {
     private final InvoiceRepository invoiceRepository;
     private final RepairJobRepository repairJobRepository;
     private final EstimateRepository estimateRepository;
+    private final CustomerRepository customerRepository;
 
     @Transactional
     public InvoiceDTO generateInvoiceForJob(Long jobId) {
@@ -99,7 +102,9 @@ public class InvoiceService {
         final Long targetCustomerId;
         if (SecurityUtils.isCustomer()) {
             Long currentUserId = SecurityUtils.getCurrentUserId();
-            targetCustomerId = currentUserId; // Filter by customer
+            Customer customer = customerRepository.findByUserId(currentUserId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Customer profile not found for logged in user"));
+            targetCustomerId = customer.getId();
         } else {
             targetCustomerId = customerId;
         }

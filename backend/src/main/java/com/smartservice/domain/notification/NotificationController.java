@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -20,6 +21,7 @@ public class NotificationController {
     private final NotificationService notificationService;
 
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get user notifications")
     public ResponseEntity<ApiResponse<PageResponse<NotificationDTO>>> getNotifications(@PageableDefault(size = 10) Pageable pageable) {
         PageResponse<NotificationDTO> page = notificationService.getUserNotifications(pageable);
@@ -27,6 +29,7 @@ public class NotificationController {
     }
 
     @GetMapping("/unread-count")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get unread notifications count")
     public ResponseEntity<ApiResponse<Long>> getUnreadCount() {
         long count = notificationService.getUnreadCount();
@@ -34,6 +37,7 @@ public class NotificationController {
     }
 
     @PatchMapping("/{id}/read")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Mark notification as read")
     public ResponseEntity<ApiResponse<Void>> markAsRead(@PathVariable Long id) {
         notificationService.markAsRead(id);

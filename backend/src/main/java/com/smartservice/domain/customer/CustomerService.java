@@ -33,6 +33,9 @@ public class CustomerService {
 
     @Transactional(readOnly = true)
     public PageResponse<CustomerDTO> searchCustomers(String query, Pageable pageable) {
+        if (SecurityUtils.isCustomer()) {
+            throw new UnauthorizedAccessException("Customers are not permitted to access customer directory");
+        }
         Page<Customer> page = customerRepository.searchCustomers(query, pageable);
         return PageResponse.from(page.map(this::mapToDTO));
     }

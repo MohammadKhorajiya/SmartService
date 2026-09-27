@@ -101,6 +101,7 @@ public class AuthService {
         user = userRepository.save(user);
 
         Long customerId = null;
+        Long technicianId = null;
         if (assignedRole == Role.CUSTOMER) {
             Customer customer = Customer.builder()
                     .user(user)
@@ -119,6 +120,7 @@ public class AuthService {
                     .status("AVAILABLE")
                     .build();
             Technician savedTech = technicianRepository.save(technician);
+            technicianId = savedTech.getId();
         }
 
         // Auto login after registration
@@ -139,6 +141,7 @@ public class AuthService {
                 .fullName(user.getFullName())
                 .role(user.getRole())
                 .customerId(customerId)
+                .technicianId(technicianId)
                 .build();
     }
 

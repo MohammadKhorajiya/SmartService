@@ -1,0 +1,56 @@
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    driver-class-name: ${DATABASE_DRIVER:org.postgresql.Driver}
+
+  jpa:
+    database-platform: ${JPA_DIALECT:org.hibernate.dialect.PostgreSQLDialect}
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+    access-token-expiration-ms: ${JWT_ACCESS_EXPIRATION:86400000}
+    refresh-token-expiration-ms: ${JWT_REFRESH_EXPIRATION:604800000}
+  cors:
+    allowed-origins: ${ALLOWED_ORIGINS}
+  payment:
+    key-id: ${PAYMENT_KEY_ID}
+    key-secret: ${PAYMENT_KEY_SECRET}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+
+logging:
+  level:
+    root: WARN
+    com.smartservice: INFO
+    org.springframework.security: WARN

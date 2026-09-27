@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -22,6 +23,7 @@ public class CustomerController {
     private final CustomerService customerService;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     @Operation(summary = "Create a new customer profile")
     public ResponseEntity<ApiResponse<CustomerDTO>> createCustomer(@Valid @RequestBody CreateCustomerRequest request) {
         CustomerDTO customerDTO = customerService.createCustomer(request);
@@ -29,6 +31,7 @@ public class CustomerController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     @Operation(summary = "Search and paginate customers")
     public ResponseEntity<ApiResponse<PageResponse<CustomerDTO>>> getCustomers(
             @RequestParam(required = false) String query,
@@ -38,6 +41,7 @@ public class CustomerController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'CUSTOMER')")
     @Operation(summary = "Get customer profile by ID")
     public ResponseEntity<ApiResponse<CustomerDTO>> getCustomerById(@PathVariable Long id) {
         CustomerDTO customerDTO = customerService.getCustomerById(id);
@@ -45,6 +49,7 @@ public class CustomerController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'CUSTOMER')")
     @Operation(summary = "Update customer profile")
     public ResponseEntity<ApiResponse<CustomerDTO>> updateCustomer(
             @PathVariable Long id,

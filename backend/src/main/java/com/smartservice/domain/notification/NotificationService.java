@@ -1,6 +1,8 @@
 package com.smartservice.domain.notification;
 
 import com.smartservice.common.dto.PageResponse;
+import com.smartservice.common.exception.ResourceNotFoundException;
+import com.smartservice.common.exception.UnauthorizedAccessException;
 import com.smartservice.common.util.SecurityUtils;
 import com.smartservice.domain.notification.dto.NotificationDTO;
 import com.smartservice.domain.user.User;
@@ -45,10 +47,16 @@ public class NotificationService {
 
     @Transactional
     public void markAsRead(Long id) {
-        notificationRepository.findById(id).ifPresent(n -> {
-            n.setReadStatus(true);
-            notificationRepository.save(n);
-        });
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        Notification n = notificationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Notification", "id", id));
+
+        if (n.getUser() == null || !n.getUser().getId().equals(currentUserId)) {
+            throw new UnauthorizedAccessException("You are not authorized to modify another user's notifications");
+        }
+
+        n.setReadStatus(true);
+        notificationRepository.save(n);
     }
 
     public NotificationDTO mapToDTO(Notification n) {

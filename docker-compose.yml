@@ -5,13 +5,18 @@ services:
     image: postgres:16-alpine
     container_name: smartservice-db
     environment:
-      POSTGRES_DB: smartservicedb
-      POSTGRES_USER: smartuser
-      POSTGRES_PASSWORD: StrongProductionPassword123!
+      POSTGRES_DB: ${POSTGRES_DB:-smartservicedb}
+      POSTGRES_USER: ${POSTGRES_USER:-smartuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-smartuser} -d $${POSTGRES_DB:-smartservicedb}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     restart: always
 
   backend:
@@ -22,16 +27,19 @@ services:
     ports:
       - "8080:8080"
     environment:
-      SPRING_PROFILES_ACTIVE: dev
-      DATABASE_URL: jdbc:postgresql://postgres:5432/smartservicedb
-      DATABASE_USERNAME: smartuser
-      DATABASE_PASSWORD: StrongProductionPassword123!
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      DATABASE_URL: ${DATABASE_URL:-jdbc:postgresql://postgres:5432/smartservicedb}
+      DATABASE_USERNAME: ${DATABASE_USERNAME:-smartuser}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
       DATABASE_DRIVER: org.postgresql.Driver
       JPA_DIALECT: org.hibernate.dialect.PostgreSQLDialect
-      JWT_SECRET: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
-      ALLOWED_ORIGINS: http://localhost,http://localhost:80,http://localhost:5173
+      JWT_SECRET: ${JWT_SECRET}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost,http://localhost:80,http://localhost:5173}
+      PAYMENT_KEY_ID: ${PAYMENT_KEY_ID:-rzp_test_mockKeyId}
+      PAYMENT_KEY_SECRET: ${PAYMENT_KEY_SECRET:-mockKeySecret}
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     restart: always
 
   frontend:
