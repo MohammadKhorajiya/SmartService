@@ -9,3 +9,25 @@ server:
   error:
     include-message: always
     include-binding-errors: always
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+  health:
+    db:
+      enabled: true
+    redis:
+      enabled: false
+    mail:
+      enabled: false
+
+app:
+  rate-limit:
+    auth:
+      enabled: ${AUTH_RATE_LIMIT_ENABLED:true}
+      requests-per-minute: ${AUTH_RATE_LIMIT_RPM:20}
