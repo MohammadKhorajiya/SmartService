@@ -11,15 +11,18 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
-@Testcontainers
 @ActiveProfiles("test")
 public abstract class BaseIntegrationTest {
 
-    @Container
-    public static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
-            .withDatabaseName("smartservicedb_test")
-            .withUsername("smartuser_test")
-            .withPassword("testpassword123");
+    public static final PostgreSQLContainer<?> postgres;
+
+    static {
+        postgres = new PostgreSQLContainer<>("postgres:16-alpine")
+                .withDatabaseName("smartservicedb_test")
+                .withUsername("smartuser_test")
+                .withPassword("testpassword123");
+        postgres.start();
+    }
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
@@ -33,6 +36,8 @@ public abstract class BaseIntegrationTest {
         registry.add("spring.flyway.baseline-on-migrate", () -> "true");
         registry.add("spring.flyway.locations", () -> "classpath:db/migration");
         registry.add("app.jwt.secret", () -> "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970");
+        registry.add("app.jwt.access-token-expiration-ms", () -> "86400000");
+        registry.add("app.jwt.refresh-token-expiration-ms", () -> "604800000");
         registry.add("app.payment.key-id", () -> "rzp_test_mockKeyId");
         registry.add("app.payment.key-secret", () -> "mockKeySecret");
     }

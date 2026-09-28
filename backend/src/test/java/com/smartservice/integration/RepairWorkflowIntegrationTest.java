@@ -220,6 +220,6 @@ class RepairWorkflowIntegrationTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(illegalStatus)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errorCode", is("INVALID_STATUS_TRANSITION")));
+                .andExpect(jsonPath("$.code", is("INVALID_STATUS_TRANSITION")));
     }
 }

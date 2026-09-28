@@ -112,6 +112,6 @@ class InventoryIntegrationTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(adjReq)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errorCode", is("NEGATIVE_STOCK")));
+                .andExpect(jsonPath("$.code", is("NEGATIVE_STOCK")));
     }
 }

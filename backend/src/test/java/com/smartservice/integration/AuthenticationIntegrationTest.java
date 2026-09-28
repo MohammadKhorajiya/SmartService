@@ -116,7 +116,7 @@ class AuthenticationIntegrationTest extends BaseIntegrationTest {
         RefreshTokenRequest refreshReq = new RefreshTokenRequest();
         refreshReq.setRefreshToken(refreshToken);
 
-        mockMvc.perform(post("/api/v1/auth/refresh-token")
+        mockMvc.perform(post("/api/v1/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(refreshReq)))
                 .andExpect(status().isOk())

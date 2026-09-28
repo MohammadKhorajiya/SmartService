@@ -32,6 +32,7 @@ class PaymentIntegrationTest extends BaseIntegrationTest {
     private Long customerId1;
     private String customerToken2;
     private Long jobId1;
+    private Long deviceId1;
     private Long invoiceId1;
 
     @BeforeEach
@@ -90,7 +91,7 @@ class PaymentIntegrationTest extends BaseIntegrationTest {
                         .content(objectMapper.writeValueAsString(devReq)))
                 .andExpect(status().isOk())
                 .andReturn();
-        Long deviceId1 = objectMapper.readTree(devRes.getResponse().getContentAsString()).path("data").path("id").asLong();
+        deviceId1 = objectMapper.readTree(devRes.getResponse().getContentAsString()).path("data").path("id").asLong();
 
         // Repair Job for C1
         CreateRepairJobRequest jobReq = new CreateRepairJobRequest();
@@ -166,6 +167,25 @@ class PaymentIntegrationTest extends BaseIntegrationTest {
     @Test
     @DisplayName("4. Duplicate payment transaction ID is rejected with 400 DUPLICATE_PAYMENT_TRANSACTION")
     void testDuplicatePaymentTransactionRejected() throws Exception {
+        // Create second job and invoice for Customer 1
+        CreateRepairJobRequest jobReq2 = new CreateRepairJobRequest();
+        jobReq2.setCustomerId(customerId1);
+        jobReq2.setDeviceId(deviceId1);
+
+        MvcResult jobRes2 = mockMvc.perform(post("/api/v1/repair-jobs")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(jobReq2)))
+                .andExpect(status().isOk())
+                .andReturn();
+        Long jobId2 = objectMapper.readTree(jobRes2.getResponse().getContentAsString()).path("data").path("id").asLong();
+
+        MvcResult invRes2 = mockMvc.perform(post("/api/v1/invoices/job/" + jobId2)
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andReturn();
+        Long invoiceId2 = objectMapper.readTree(invRes2.getResponse().getContentAsString()).path("data").path("id").asLong();
+
         String txId = "pay_dup_" + System.currentTimeMillis();
         VerifyPaymentRequest verifyReq1 = new VerifyPaymentRequest();
         verifyReq1.setInvoiceId(invoiceId1);
@@ -179,9 +199,9 @@ class PaymentIntegrationTest extends BaseIntegrationTest {
                         .content(objectMapper.writeValueAsString(verifyReq1)))
                 .andExpect(status().isOk());
 
-        // Replay attempt with same transaction ID
+        // Replay attempt with same transaction ID on second unpaid invoice
         VerifyPaymentRequest verifyReq2 = new VerifyPaymentRequest();
-        verifyReq2.setInvoiceId(invoiceId1);
+        verifyReq2.setInvoiceId(invoiceId2);
         verifyReq2.setRazorpayPaymentId(txId);
         verifyReq2.setPaymentMethod("ONLINE");
 
@@ -190,6 +210,6 @@ class PaymentIntegrationTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(verifyReq2)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errorCode", is("DUPLICATE_PAYMENT_TRANSACTION")));
+                .andExpect(jsonPath("$.code", is("DUPLICATE_PAYMENT_TRANSACTION")));
     }
 }
