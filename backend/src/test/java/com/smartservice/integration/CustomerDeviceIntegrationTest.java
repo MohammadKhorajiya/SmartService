@@ -120,6 +120,49 @@ class CustomerDeviceIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
+    @DisplayName("3b. Admin can search/list customers with pagination and sorting")
+    void testGetCustomersWithPaginationAndSort() throws Exception {
+        mockMvc.perform(get("/api/v1/customers")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("page", "0")
+                        .param("size", "10")
+                        .param("sort", "id,asc"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("3c. Admin test sort=id&sort=asc (multiple sort params)")
+    void testGetCustomersWithMultipleSortParams() throws Exception {
+        mockMvc.perform(get("/api/v1/customers")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("page", "0")
+                        .param("size", "10")
+                        .param("sort", "id", "asc"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("3d. Admin test sort param with brackets sort=[\"id,asc\"]")
+    void testGetCustomersWithBracketSort() throws Exception {
+        mockMvc.perform(get("/api/v1/customers")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("page", "0")
+                        .param("size", "10")
+                        .param("sort", "[\"id,asc\"]"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("3e. Admin test GET with JSON body")
+    void testGetCustomersWithJsonBody() throws Exception {
+        mockMvc.perform(get("/api/v1/customers")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"page\":0,\"size\":10,\"sort\":[\"id,asc\"]}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     @DisplayName("4. CUSTOMER can create device for their own account")
     void testCustomerCanCreateDeviceForSelf() throws Exception {
         CreateDeviceRequest devReq = new CreateDeviceRequest();

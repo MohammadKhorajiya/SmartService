@@ -36,7 +36,8 @@ public class CustomerService {
         if (SecurityUtils.isCustomer()) {
             throw new UnauthorizedAccessException("Customers are not permitted to access customer directory");
         }
-        Page<Customer> page = customerRepository.searchCustomers(query, pageable);
+        String searchQuery = (query != null && !query.trim().isEmpty()) ? query.trim() : null;
+        Page<Customer> page = customerRepository.searchCustomers(searchQuery, pageable);
         return PageResponse.from(page.map(this::mapToDTO));
     }
 

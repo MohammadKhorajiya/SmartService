@@ -17,8 +17,9 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     Optional<Customer> findByEmail(String email);
 
     @Query("SELECT c FROM Customer c WHERE " +
-           "(:query IS NULL OR LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-           "LOWER(c.email) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-           "c.phone LIKE CONCAT('%', :query, '%'))")
+           "(:query IS NULL OR :query = '' OR " +
+           "LOWER(c.name) LIKE LOWER(CONCAT('%', CAST(:query AS string), '%')) OR " +
+           "LOWER(c.email) LIKE LOWER(CONCAT('%', CAST(:query AS string), '%')) OR " +
+           "c.phone LIKE CONCAT('%', CAST(:query AS string), '%'))")
     Page<Customer> searchCustomers(@Param("query") String query, Pageable pageable);
 }
