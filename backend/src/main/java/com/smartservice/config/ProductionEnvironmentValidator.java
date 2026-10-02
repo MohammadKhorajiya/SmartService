@@ -26,8 +26,15 @@ public class ProductionEnvironmentValidator {
         validateProperty("app.jwt.secret", "JWT_SECRET");
 
         String dbUrl = environment.getProperty("spring.datasource.url");
-        if (dbUrl != null && dbUrl.toLowerCase().contains("jdbc:h2")) {
-            throw new IllegalStateException("CRITICAL SECURITY ERROR: Production profile cannot use H2 database URL: " + dbUrl);
+        if (dbUrl != null) {
+            if (dbUrl.toLowerCase().contains("jdbc:h2")) {
+                throw new IllegalStateException("CRITICAL SECURITY ERROR: Production profile cannot use H2 database URL: " + dbUrl);
+            }
+            if (dbUrl.startsWith("postgres://") || dbUrl.startsWith("postgresql://")) {
+                throw new IllegalStateException("CRITICAL PRODUCTION CONFIGURATION ERROR: 'DATABASE_URL' (" + dbUrl
+                        + ") must be a valid JDBC URL starting with 'jdbc:postgresql://' (or 'jdbc:postgres://'). "
+                        + "Standard PostgreSQL URIs (e.g., 'postgres://...') are rejected by org.postgresql.Driver.");
+            }
         }
 
         log.info("Production environment configuration validation passed successfully.");

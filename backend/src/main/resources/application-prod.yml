@@ -1,8 +1,8 @@
 spring:
   datasource:
     url: ${DATABASE_URL}
-    username: ${DATABASE_USERNAME}
-    password: ${DATABASE_PASSWORD}
+    username: ${DATABASE_USERNAME:}
+    password: ${DATABASE_PASSWORD:}
     driver-class-name: ${DATABASE_DRIVER:org.postgresql.Driver}
 
   jpa:
@@ -22,8 +22,8 @@ spring:
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -37,10 +37,10 @@ app:
     access-token-expiration-ms: ${JWT_ACCESS_EXPIRATION:86400000}
     refresh-token-expiration-ms: ${JWT_REFRESH_EXPIRATION:604800000}
   cors:
-    allowed-origins: ${ALLOWED_ORIGINS}
+    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173}
   payment:
-    key-id: ${PAYMENT_KEY_ID}
-    key-secret: ${PAYMENT_KEY_SECRET}
+    key-id: ${PAYMENT_KEY_ID:rzp_test_mockKeyId}
+    key-secret: ${PAYMENT_KEY_SECRET:mockKeySecret}
 
 springdoc:
   api-docs:
@@ -54,3 +54,4 @@ logging:
     root: WARN
     com.smartservice: INFO
     org.springframework.security: WARN
+
