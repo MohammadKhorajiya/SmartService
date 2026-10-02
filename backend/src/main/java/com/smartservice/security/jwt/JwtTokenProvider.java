@@ -10,6 +10,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 @Slf4j
@@ -23,7 +24,32 @@ public class JwtTokenProvider {
     private long jwtExpirationMs;
 
     private SecretKey getSigningKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
+        if (jwtSecret == null || jwtSecret.isBlank()) {
+            throw new IllegalStateException("JWT secret key is not configured. Please set app.jwt.secret or JWT_SECRET environment variable.");
+        }
+
+        String trimmedSecret = jwtSecret.trim();
+        byte[] keyBytes;
+
+        try {
+            keyBytes = Decoders.BASE64.decode(trimmedSecret);
+        } catch (Exception e) {
+            try {
+                keyBytes = Decoders.BASE64URL.decode(trimmedSecret);
+            } catch (Exception ex) {
+                keyBytes = trimmedSecret.getBytes(StandardCharsets.UTF_8);
+            }
+        }
+
+        if (keyBytes.length < 32) {
+            byte[] rawUtf8Bytes = trimmedSecret.getBytes(StandardCharsets.UTF_8);
+            if (rawUtf8Bytes.length >= 32) {
+                keyBytes = rawUtf8Bytes;
+            } else {
+                throw new IllegalStateException("JWT secret key must be at least 32 characters (256 bits) long. Provided secret length is insufficient.");
+            }
+        }
+
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
@@ -62,14 +88,14 @@ public class JwtTokenProvider {
                     .build()
                     .parseSignedClaims(token);
             return true;
-        } catch (SecurityException | MalformedJwtException e) {
+        } catch (io.jsonwebtoken.security.SecurityException | MalformedJwtException e) {
             log.error("Invalid JWT signature: {}", e.getMessage());
         } catch (ExpiredJwtException e) {
             log.error("JWT token is expired: {}", e.getMessage());
         } catch (UnsupportedJwtException e) {
             log.error("JWT token is unsupported: {}", e.getMessage());
-        } catch (IllegalArgumentException e) {
-            log.error("JWT claims string is empty: {}", e.getMessage());
+        } catch (IllegalArgumentException | JwtException e) {
+            log.error("Invalid JWT token: {}", e.getMessage());
         }
         return false;
     }
