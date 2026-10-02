@@ -137,4 +137,23 @@ class DatabaseUrlEnvironmentPostProcessorTest {
 
         assertNull(env.getProperty("spring.datasource.url"));
     }
+
+    @Test
+    void testPreserveSslModeQueryParameters() {
+        MockEnvironment env = new MockEnvironment();
+        env.setProperty("DATABASE_URL", "postgresql://testuser:testpass@dbhost.example.com:5432/mydb?sslmode=require");
+
+        DatabaseUrlEnvironmentPostProcessor processor = new DatabaseUrlEnvironmentPostProcessor();
+        processor.postProcessEnvironment(env, null);
+
+        String generatedUrl = env.getProperty("spring.datasource.url");
+        assertNotNull(generatedUrl);
+        assertEquals("jdbc:postgresql://dbhost.example.com:5432/mydb?sslmode=require", generatedUrl);
+        assertEquals("testuser", env.getProperty("spring.datasource.username"));
+        assertEquals("testpass", env.getProperty("spring.datasource.password"));
+
+        assertFalse(generatedUrl.contains("testuser"));
+        assertFalse(generatedUrl.contains("testpass"));
+        assertFalse(generatedUrl.contains("@"));
+    }
 }
