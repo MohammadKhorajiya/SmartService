@@ -3,46 +3,138 @@ package com.smartservice.config;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.env.MockEnvironment;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 class DatabaseUrlEnvironmentPostProcessorTest {
 
     @Test
-    void testPostProcessEnvironmentWithRenderUrl() {
+    void testPostgresqlSchemeWithDefaultPort() {
         MockEnvironment env = new MockEnvironment();
-        env.setProperty("DATABASE_URL", "postgresql://smartserviceprod:2Vwr5eyVGZjCVaaqKBYXFKrgmtQp6Xy8@dpg-davutk0u01pc73885jf0-a/smartservicedb");
+        env.setProperty("DATABASE_URL", "postgresql://testuser:testpass@dpg-dummyhost-a/smartservicedb");
 
         DatabaseUrlEnvironmentPostProcessor processor = new DatabaseUrlEnvironmentPostProcessor();
         processor.postProcessEnvironment(env, null);
 
-        assertEquals("jdbc:postgresql://dpg-davutk0u01pc73885jf0-a:5432/smartservicedb", env.getProperty("spring.datasource.url"));
-        assertEquals("smartserviceprod", env.getProperty("spring.datasource.username"));
-        assertEquals("2Vwr5eyVGZjCVaaqKBYXFKrgmtQp6Xy8", env.getProperty("spring.datasource.password"));
+        String generatedUrl = env.getProperty("spring.datasource.url");
+        assertNotNull(generatedUrl);
+        assertEquals("jdbc:postgresql://dpg-dummyhost-a/smartservicedb", generatedUrl);
+        assertEquals("testuser", env.getProperty("spring.datasource.username"));
+        assertEquals("testpass", env.getProperty("spring.datasource.password"));
+
+        // Explicit assertions: URL MUST NOT contain embedded credentials or @
+        assertFalse(generatedUrl.contains("testuser"));
+        assertFalse(generatedUrl.contains("testpass"));
+        assertFalse(generatedUrl.contains("@"));
     }
 
     @Test
-    void testPostProcessEnvironmentWithJdbcPrefixAndEmbeddedCredentials() {
+    void testPostgresSchemeWithExplicitPort() {
         MockEnvironment env = new MockEnvironment();
-        env.setProperty("DATABASE_URL", "jdbc:postgresql://smartserviceprod:2Vwr5eyVGZjCVaaqKBYXFKrgmtQp6Xy8@dpg-davutk0u01pc73885jf0-a/smartservicedb");
+        env.setProperty("DATABASE_URL", "postgres://testuser:testpass@dbhost.example.com:5433/mydb");
 
         DatabaseUrlEnvironmentPostProcessor processor = new DatabaseUrlEnvironmentPostProcessor();
         processor.postProcessEnvironment(env, null);
 
-        assertEquals("jdbc:postgresql://dpg-davutk0u01pc73885jf0-a:5432/smartservicedb", env.getProperty("spring.datasource.url"));
-        assertEquals("smartserviceprod", env.getProperty("spring.datasource.username"));
-        assertEquals("2Vwr5eyVGZjCVaaqKBYXFKrgmtQp6Xy8", env.getProperty("spring.datasource.password"));
+        String generatedUrl = env.getProperty("spring.datasource.url");
+        assertNotNull(generatedUrl);
+        assertEquals("jdbc:postgresql://dbhost.example.com:5433/mydb", generatedUrl);
+        assertEquals("testuser", env.getProperty("spring.datasource.username"));
+        assertEquals("testpass", env.getProperty("spring.datasource.password"));
+
+        assertFalse(generatedUrl.contains("testuser"));
+        assertFalse(generatedUrl.contains("testpass"));
+        assertFalse(generatedUrl.contains("@"));
     }
 
     @Test
-    void testPostProcessEnvironmentWithPostgresSchemeAndPort() {
+    void testPostgresqlSchemeWithExplicitPort5432() {
         MockEnvironment env = new MockEnvironment();
-        env.setProperty("DATABASE_URL", "postgres://user:pass@host.example.com:5433/mydb");
+        env.setProperty("DATABASE_URL", "postgresql://testuser:testpass@dbhost.example.com:5432/mydb");
 
         DatabaseUrlEnvironmentPostProcessor processor = new DatabaseUrlEnvironmentPostProcessor();
         processor.postProcessEnvironment(env, null);
 
-        assertEquals("jdbc:postgresql://host.example.com:5433/mydb", env.getProperty("spring.datasource.url"));
-        assertEquals("user", env.getProperty("spring.datasource.username"));
-        assertEquals("pass", env.getProperty("spring.datasource.password"));
+        String generatedUrl = env.getProperty("spring.datasource.url");
+        assertNotNull(generatedUrl);
+        assertEquals("jdbc:postgresql://dbhost.example.com:5432/mydb", generatedUrl);
+        assertEquals("testuser", env.getProperty("spring.datasource.username"));
+        assertEquals("testpass", env.getProperty("spring.datasource.password"));
+
+        assertFalse(generatedUrl.contains("testuser"));
+        assertFalse(generatedUrl.contains("testpass"));
+        assertFalse(generatedUrl.contains("@"));
+    }
+
+    @Test
+    void testPasswordContainingSpecialUrlCharacters() {
+        MockEnvironment env = new MockEnvironment();
+        env.setProperty("DATABASE_URL", "postgresql://user%40domain:p%40ss%23word%21@dbhost.example.com:5432/mydb");
+
+        DatabaseUrlEnvironmentPostProcessor processor = new DatabaseUrlEnvironmentPostProcessor();
+        processor.postProcessEnvironment(env, null);
+
+        String generatedUrl = env.getProperty("spring.datasource.url");
+        assertNotNull(generatedUrl);
+        assertEquals("jdbc:postgresql://dbhost.example.com:5432/mydb", generatedUrl);
+        assertEquals("user@domain", env.getProperty("spring.datasource.username"));
+        assertEquals("p@ss#word!", env.getProperty("spring.datasource.password"));
+
+        assertFalse(generatedUrl.contains("user"));
+        assertFalse(generatedUrl.contains("p@ss"));
+        assertFalse(generatedUrl.contains("@dbhost"));
+    }
+
+    @Test
+    void testJdbcPrefixedUrlWithEmbeddedCredentials() {
+        MockEnvironment env = new MockEnvironment();
+        env.setProperty("DATABASE_URL", "jdbc:postgresql://testuser:testpass@dpg-dummyhost-a/smartservicedb");
+
+        DatabaseUrlEnvironmentPostProcessor processor = new DatabaseUrlEnvironmentPostProcessor();
+        processor.postProcessEnvironment(env, null);
+
+        String generatedUrl = env.getProperty("spring.datasource.url");
+        assertNotNull(generatedUrl);
+        assertEquals("jdbc:postgresql://dpg-dummyhost-a/smartservicedb", generatedUrl);
+        assertEquals("testuser", env.getProperty("spring.datasource.username"));
+        assertEquals("testpass", env.getProperty("spring.datasource.password"));
+
+        assertFalse(generatedUrl.contains("testuser"));
+        assertFalse(generatedUrl.contains("testpass"));
+        assertFalse(generatedUrl.contains("@"));
+    }
+
+    @Test
+    void testAlreadyCorrectJdbcFormattedUrlWithoutCredentials() {
+        MockEnvironment env = new MockEnvironment();
+        env.setProperty("spring.datasource.url", "jdbc:postgresql://localhost:5432/smartservicedb");
+
+        DatabaseUrlEnvironmentPostProcessor processor = new DatabaseUrlEnvironmentPostProcessor();
+        processor.postProcessEnvironment(env, null);
+
+        String generatedUrl = env.getProperty("spring.datasource.url");
+        assertEquals("jdbc:postgresql://localhost:5432/smartservicedb", generatedUrl);
+        assertNull(env.getProperty("spring.datasource.username"));
+        assertNull(env.getProperty("spring.datasource.password"));
+    }
+
+    @Test
+    void testMissingDatabaseUrlHandling() {
+        MockEnvironment env = new MockEnvironment();
+
+        DatabaseUrlEnvironmentPostProcessor processor = new DatabaseUrlEnvironmentPostProcessor();
+        assertDoesNotThrow(() -> processor.postProcessEnvironment(env, null));
+
+        assertNull(env.getProperty("spring.datasource.url"));
+    }
+
+    @Test
+    void testInvalidDatabaseUrlHandling() {
+        MockEnvironment env = new MockEnvironment();
+        env.setProperty("DATABASE_URL", "not_a_valid_url");
+
+        DatabaseUrlEnvironmentPostProcessor processor = new DatabaseUrlEnvironmentPostProcessor();
+        assertDoesNotThrow(() -> processor.postProcessEnvironment(env, null));
+
+        assertNull(env.getProperty("spring.datasource.url"));
     }
 }

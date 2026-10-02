@@ -20,6 +20,19 @@ class ProductionEnvironmentValidatorTest {
     }
 
     @Test
+    void testValidationPassesWithRenderUrlAfterPostProcessor() {
+        MockEnvironment env = new MockEnvironment();
+        env.setProperty("DATABASE_URL", "postgresql://smartserviceprod:2Vwr5eyVGZjCVaaqKBYXFKrgmtQp6Xy8@dpg-davutk0u01pc73885jf0-a/smartservicedb");
+        env.setProperty("app.jwt.secret", "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970");
+
+        DatabaseUrlEnvironmentPostProcessor processor = new DatabaseUrlEnvironmentPostProcessor();
+        processor.postProcessEnvironment(env, null);
+
+        ProductionEnvironmentValidator validator = new ProductionEnvironmentValidator(env);
+        assertDoesNotThrow(validator::validateProductionEnvironment);
+    }
+
+    @Test
     void testValidationFailsWhenH2UrlProvided() {
         MockEnvironment env = new MockEnvironment();
         env.setProperty("spring.datasource.url", "jdbc:h2:mem:testdb");
@@ -33,16 +46,16 @@ class ProductionEnvironmentValidatorTest {
     }
 
     @Test
-    void testValidationFailsWhenNonJdbcPostgresUrlProvided() {
+    void testValidationFailsWhenUrlContainsEmbeddedCredentials() {
         MockEnvironment env = new MockEnvironment();
-        env.setProperty("spring.datasource.url", "postgres://user:pass@host:5432/db");
+        env.setProperty("spring.datasource.url", "jdbc:postgresql://user:pass@host:5432/db");
         env.setProperty("spring.datasource.username", "user");
         env.setProperty("spring.datasource.password", "pass");
         env.setProperty("app.jwt.secret", "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970");
 
         ProductionEnvironmentValidator validator = new ProductionEnvironmentValidator(env);
         IllegalStateException ex = assertThrows(IllegalStateException.class, validator::validateProductionEnvironment);
-        assertTrue(ex.getMessage().contains("must be a valid JDBC URL starting with 'jdbc:postgresql://'"));
+        assertTrue(ex.getMessage().contains("embedded credentials"));
     }
 
     @Test
@@ -50,7 +63,6 @@ class ProductionEnvironmentValidatorTest {
         MockEnvironment env = new MockEnvironment();
         env.setProperty("spring.datasource.url", "jdbc:postgresql://localhost:5432/smartservicedb");
         env.setProperty("spring.datasource.username", "postgres");
-        // missing password and jwt secret
 
         ProductionEnvironmentValidator validator = new ProductionEnvironmentValidator(env);
         assertThrows(IllegalStateException.class, validator::validateProductionEnvironment);

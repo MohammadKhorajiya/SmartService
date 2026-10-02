@@ -5,7 +5,8 @@ import org.springframework.boot.env.EnvironmentPostProcessor;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
 
-import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,48 +23,68 @@ public class DatabaseUrlEnvironmentPostProcessor implements EnvironmentPostProce
             return;
         }
 
-        // Strip leading "jdbc:" if present to handle formats like "jdbc:postgresql://user:pass@host/db"
-        String normalizedUrl = rawUrl.startsWith("jdbc:") ? rawUrl.substring(5) : rawUrl;
+        // If rawUrl is already a clean JDBC URL with no embedded credentials (@), do not modify it
+        if (rawUrl.startsWith("jdbc:") && !rawUrl.contains("@")) {
+            return;
+        }
 
-        if (normalizedUrl.startsWith("postgres://") || normalizedUrl.startsWith("postgresql://")) {
-            try {
-                String httpUrl = normalizedUrl.replaceFirst("^(postgres|postgresql)://", "http://");
-                URI uri = new URI(httpUrl);
+        // Strip leading "jdbc:" if present (e.g., "jdbc:postgresql://user:pass@host/db")
+        String workingUrl = rawUrl.startsWith("jdbc:") ? rawUrl.substring(5) : rawUrl;
 
-                String host = uri.getHost();
-                if (host == null || host.isBlank()) {
-                    return;
-                }
+        // Verify it starts with postgres:// or postgresql://
+        if (!workingUrl.startsWith("postgres://") && !workingUrl.startsWith("postgresql://")) {
+            return;
+        }
 
-                int port = uri.getPort() == -1 ? 5432 : uri.getPort();
-                String path = uri.getPath();
-                String query = uri.getRawQuery();
+        try {
+            // Remove scheme prefix "postgres://" or "postgresql://"
+            String schemeStripped = workingUrl.replaceFirst("^(postgres|postgresql)://", "");
+            if (schemeStripped.isBlank()) {
+                return;
+            }
 
-                StringBuilder jdbcUrlBuilder = new StringBuilder("jdbc:postgresql://");
-                jdbcUrlBuilder.append(host).append(":").append(port).append(path);
-                if (query != null && !query.isBlank()) {
-                    jdbcUrlBuilder.append("?").append(query);
-                }
+            Map<String, Object> targetProps = new HashMap<>();
+            String hostAndPath;
 
-                Map<String, Object> targetProps = new HashMap<>();
-                targetProps.put("spring.datasource.url", jdbcUrlBuilder.toString());
+            if (schemeStripped.contains("@")) {
+                int lastAt = schemeStripped.lastIndexOf('@');
+                String userInfo = schemeStripped.substring(0, lastAt);
+                hostAndPath = schemeStripped.substring(lastAt + 1);
 
-                if (uri.getUserInfo() != null) {
-                    String[] userInfo = uri.getUserInfo().split(":", 2);
-                    if (userInfo.length >= 1 && !userInfo[0].isEmpty()) {
-                        targetProps.put("spring.datasource.username", userInfo[0]);
+                if (!userInfo.isEmpty()) {
+                    int firstColon = userInfo.indexOf(':');
+                    String rawUsername;
+                    String rawPassword;
+                    if (firstColon != -1) {
+                        rawUsername = userInfo.substring(0, firstColon);
+                        rawPassword = userInfo.substring(firstColon + 1);
+                    } else {
+                        rawUsername = userInfo;
+                        rawPassword = "";
                     }
-                    if (userInfo.length >= 2 && !userInfo[1].isEmpty()) {
-                        targetProps.put("spring.datasource.password", userInfo[1]);
-                    }
-                }
 
+                    String username = URLDecoder.decode(rawUsername, StandardCharsets.UTF_8);
+                    String password = URLDecoder.decode(rawPassword, StandardCharsets.UTF_8);
+
+                    targetProps.put("spring.datasource.username", username);
+                    targetProps.put("spring.datasource.password", password);
+                }
+            } else {
+                hostAndPath = schemeStripped;
+            }
+
+            if (!hostAndPath.isBlank()) {
+                String cleanJdbcUrl = "jdbc:postgresql://" + hostAndPath;
+                targetProps.put("spring.datasource.url", cleanJdbcUrl);
+            }
+
+            if (!targetProps.isEmpty()) {
                 environment.getPropertySources().addFirst(
                         new MapPropertySource("parsedCloudDatabaseUrlProperties", targetProps)
                 );
-            } catch (Exception e) {
-                // Silently fallback if format is unparseable
             }
+        } catch (Exception e) {
+            // Silently fallback if format is unparseable
         }
     }
 }
