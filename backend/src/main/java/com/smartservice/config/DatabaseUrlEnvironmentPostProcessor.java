@@ -18,12 +18,23 @@ public class DatabaseUrlEnvironmentPostProcessor implements EnvironmentPostProce
             rawUrl = environment.getProperty("spring.datasource.url");
         }
 
-        if (rawUrl != null && (rawUrl.startsWith("postgres://") || rawUrl.startsWith("postgresql://"))) {
+        if (rawUrl == null || rawUrl.isBlank()) {
+            return;
+        }
+
+        // Strip leading "jdbc:" if present to handle formats like "jdbc:postgresql://user:pass@host/db"
+        String normalizedUrl = rawUrl.startsWith("jdbc:") ? rawUrl.substring(5) : rawUrl;
+
+        if (normalizedUrl.startsWith("postgres://") || normalizedUrl.startsWith("postgresql://")) {
             try {
-                String httpUrl = rawUrl.replaceFirst("^(postgres|postgresql)://", "http://");
+                String httpUrl = normalizedUrl.replaceFirst("^(postgres|postgresql)://", "http://");
                 URI uri = new URI(httpUrl);
 
                 String host = uri.getHost();
+                if (host == null || host.isBlank()) {
+                    return;
+                }
+
                 int port = uri.getPort() == -1 ? 5432 : uri.getPort();
                 String path = uri.getPath();
                 String query = uri.getRawQuery();
