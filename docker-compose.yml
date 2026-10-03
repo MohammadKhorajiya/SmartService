@@ -35,8 +35,8 @@ services:
       JPA_DIALECT: org.hibernate.dialect.PostgreSQLDialect
       JWT_SECRET: ${JWT_SECRET}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost,http://localhost:80,http://localhost:5173}
-      PAYMENT_KEY_ID: ${PAYMENT_KEY_ID:-rzp_test_mockKeyId}
-      PAYMENT_KEY_SECRET: ${PAYMENT_KEY_SECRET:-mockKeySecret}
+      PAYMENT_KEY_ID: ${PAYMENT_KEY_ID:-}
+      PAYMENT_KEY_SECRET: ${PAYMENT_KEY_SECRET:-}
     depends_on:
       postgres:
         condition: service_healthy

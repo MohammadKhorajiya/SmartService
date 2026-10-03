@@ -48,8 +48,8 @@ app:
   cors:
     allowed-origins: ${ALLOWED_ORIGINS:https://smartservice-tau.vercel.app}
   payment:
-    key-id: ${PAYMENT_KEY_ID:rzp_test_mockKeyId}
-    key-secret: ${PAYMENT_KEY_SECRET:mockKeySecret}
+    key-id: ${PAYMENT_KEY_ID:}
+    key-secret: ${PAYMENT_KEY_SECRET:}
 
 springdoc:
   api-docs:
