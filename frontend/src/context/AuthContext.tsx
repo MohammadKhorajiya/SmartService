@@ -32,7 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Perform silent refresh using HttpOnly cookie to rehydrate session on page load/reopen
     api
-      .post('/auth/refresh')
+      .post('/auth/refresh', {})
       .then((res) => {
         if (res.data?.success && res.data?.data) {
           const authData: AuthResponse = res.data.data;
