@@ -12,7 +12,7 @@ export interface User {
 
 export interface AuthResponse {
   accessToken: string;
-  refreshToken: string;
+  refreshToken?: string;
   tokenType: string;
   userId: number;
   email: string;

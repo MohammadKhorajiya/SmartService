@@ -26,7 +26,7 @@ class AuthenticationIntegrationTest extends BaseIntegrationTest {
     private ObjectMapper objectMapper;
 
     @Test
-    @DisplayName("1. Customer registration creates user & customer record with valid JWT token")
+    @DisplayName("1. Customer registration creates user & customer record with valid JWT token and HttpOnly cookie")
     void testCustomerRegistrationSuccess() throws Exception {
         RegisterRequest request = new RegisterRequest();
         request.setEmail("test.customer@smartservice.com");
@@ -39,8 +39,8 @@ class AuthenticationIntegrationTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
+                .andExpect(header().exists("Set-Cookie"))
                 .andExpect(jsonPath("$.data.accessToken", notNullValue()))
-                .andExpect(jsonPath("$.data.refreshToken", notNullValue()))
                 .andExpect(jsonPath("$.data.email", is("test.customer@smartservice.com")))
                 .andExpect(jsonPath("$.data.role", is("CUSTOMER")))
                 .andExpect(jsonPath("$.data.customerId", notNullValue()));
@@ -60,13 +60,14 @@ class AuthenticationIntegrationTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
+                .andExpect(header().exists("Set-Cookie"))
                 .andExpect(jsonPath("$.data.accessToken", notNullValue()))
                 .andExpect(jsonPath("$.data.role", is("TECHNICIAN")))
                 .andExpect(jsonPath("$.data.technicianId", notNullValue()));
     }
 
     @Test
-    @DisplayName("3. Login with seed admin credentials returns valid JWT token")
+    @DisplayName("3. Login with seed admin credentials returns valid JWT token and Set-Cookie")
     void testLoginSuccess() throws Exception {
         LoginRequest request = new LoginRequest();
         request.setEmail("admin@smartservice.com");
@@ -76,6 +77,7 @@ class AuthenticationIntegrationTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
+                .andExpect(header().exists("Set-Cookie"))
                 .andExpect(jsonPath("$.data.accessToken", notNullValue()))
                 .andExpect(jsonPath("$.data.role", is("ADMIN")));
     }
@@ -94,7 +96,7 @@ class AuthenticationIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("5. Refresh token exchanges valid refresh token for new access token")
+    @DisplayName("5. Refresh token exchanges valid refresh cookie for new access token & rotates refresh token")
     void testRefreshTokenSuccess() throws Exception {
         // Register user first
         RegisterRequest regReq = new RegisterRequest();
@@ -107,24 +109,48 @@ class AuthenticationIntegrationTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(regReq)))
                 .andExpect(status().isOk())
+                .andExpect(header().exists("Set-Cookie"))
                 .andReturn();
 
-        String body = regResult.getResponse().getContentAsString();
-        String refreshToken = objectMapper.readTree(body).path("data").path("refreshToken").asText();
+        jakarta.servlet.http.Cookie refreshCookie = regResult.getResponse().getCookie("refreshToken");
 
-        // Refresh token
-        RefreshTokenRequest refreshReq = new RefreshTokenRequest();
-        refreshReq.setRefreshToken(refreshToken);
-
+        // Perform refresh using cookie
         mockMvc.perform(post("/api/v1/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(refreshReq)))
+                        .cookie(refreshCookie))
                 .andExpect(status().isOk())
+                .andExpect(header().exists("Set-Cookie"))
                 .andExpect(jsonPath("$.data.accessToken", notNullValue()));
     }
 
     @Test
-    @DisplayName("6. Unauthenticated access to protected endpoints returns 401 Unauthorized")
+    @DisplayName("6. Reuse of revoked refresh token triggers reuse detection alert")
+    void testRevokedRefreshTokenReuseDetection() throws Exception {
+        RegisterRequest regReq = new RegisterRequest();
+        regReq.setEmail("reuse.user@smartservice.com");
+        regReq.setPassword("Password@123");
+        regReq.setFullName("Reuse User");
+        regReq.setRole(Role.CUSTOMER);
+
+        MvcResult regResult = mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(regReq)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        jakarta.servlet.http.Cookie initialCookie = regResult.getResponse().getCookie("refreshToken");
+
+        // Rotate token once -> initialCookie is now marked revoked
+        mockMvc.perform(post("/api/v1/auth/refresh").cookie(initialCookie))
+                .andExpect(status().isOk());
+
+        // Attempting to reuse initialCookie (now revoked) should trigger reuse detection error
+        mockMvc.perform(post("/api/v1/auth/refresh").cookie(initialCookie))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode", is("TOKEN_REUSE_DETECTED")));
+    }
+
+    @Test
+    @DisplayName("7. Unauthenticated access to protected endpoints returns 401 Unauthorized")
     void testUnauthenticatedAccessRejected() throws Exception {
         mockMvc.perform(get("/api/v1/customers"))
                 .andExpect(status().isUnauthorized());

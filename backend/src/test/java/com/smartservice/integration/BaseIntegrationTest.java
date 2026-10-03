@@ -49,7 +49,7 @@ public abstract class BaseIntegrationTest {
         registry.add("spring.flyway.baseline-on-migrate", () -> "true");
         registry.add("spring.flyway.locations", () -> "classpath:db/migration");
         registry.add("app.jwt.secret", () -> "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970");
-        registry.add("app.jwt.access-token-expiration-ms", () -> "86400000");
+        registry.add("app.jwt.access-token-expiration-ms", () -> "900000");
         registry.add("app.jwt.refresh-token-expiration-ms", () -> "604800000");
         registry.add("app.payment.key-id", () -> "rzp_test_mockKeyId");
         registry.add("app.payment.key-secret", () -> "mockKeySecret");

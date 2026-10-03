@@ -5,10 +5,13 @@ import com.smartservice.domain.auth.dto.AuthResponse;
 import com.smartservice.domain.auth.dto.LoginRequest;
 import com.smartservice.domain.auth.dto.RefreshTokenRequest;
 import com.smartservice.domain.auth.dto.RegisterRequest;
+import com.smartservice.security.jwt.CookieUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,35 +22,67 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final CookieUtils cookieUtils;
 
     @PostMapping("/login")
-    @Operation(summary = "Authenticate user and issue JWT tokens")
+    @Operation(summary = "Authenticate user and issue JWT tokens with HttpOnly cookie")
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
-        return ResponseEntity.ok(ApiResponse.success(response, "Login successful"));
+        ResponseCookie cookie = cookieUtils.createRefreshTokenCookie(response.getRefreshToken());
+        response.setRefreshToken(null);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(ApiResponse.success(response, "Login successful"));
     }
 
     @PostMapping("/register")
-    @Operation(summary = "Register new customer or user account")
+    @Operation(summary = "Register new customer or user account with HttpOnly cookie")
     public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
         AuthResponse response = authService.register(request);
-        return ResponseEntity.ok(ApiResponse.success(response, "User registered successfully"));
+        ResponseCookie cookie = cookieUtils.createRefreshTokenCookie(response.getRefreshToken());
+        response.setRefreshToken(null);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(ApiResponse.success(response, "User registered successfully"));
     }
 
     @PostMapping("/refresh")
-    @Operation(summary = "Generate new access token using refresh token")
-    public ResponseEntity<ApiResponse<AuthResponse>> refresh(@Valid @RequestBody RefreshTokenRequest request) {
-        AuthResponse response = authService.refreshToken(request);
-        return ResponseEntity.ok(ApiResponse.success(response, "Token refreshed successfully"));
+    @Operation(summary = "Generate new access token using refresh cookie or request body")
+    public ResponseEntity<ApiResponse<AuthResponse>> refresh(
+            @CookieValue(name = CookieUtils.REFRESH_TOKEN_COOKIE_NAME, required = false) String refreshTokenFromCookie,
+            @RequestBody(required = false) RefreshTokenRequest request) {
+        
+        String tokenToRefresh = (refreshTokenFromCookie != null && !refreshTokenFromCookie.isBlank())
+                ? refreshTokenFromCookie
+                : (request != null ? request.getRefreshToken() : null);
+
+        AuthResponse response = authService.refreshToken(tokenToRefresh);
+        ResponseCookie newCookie = cookieUtils.createRefreshTokenCookie(response.getRefreshToken());
+        response.setRefreshToken(null);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, newCookie.toString())
+                .body(ApiResponse.success(response, "Token refreshed successfully"));
     }
 
     @PostMapping("/logout")
-    @Operation(summary = "Revoke user refresh token")
-    public ResponseEntity<ApiResponse<Void>> logout(@RequestBody(required = false) RefreshTokenRequest request) {
-        if (request != null) {
-            authService.logout(request.getRefreshToken());
+    @Operation(summary = "Revoke user refresh token and clear HttpOnly cookie")
+    public ResponseEntity<ApiResponse<Void>> logout(
+            @CookieValue(name = CookieUtils.REFRESH_TOKEN_COOKIE_NAME, required = false) String refreshTokenFromCookie,
+            @RequestBody(required = false) RefreshTokenRequest request) {
+        
+        String tokenToRevoke = (refreshTokenFromCookie != null && !refreshTokenFromCookie.isBlank())
+                ? refreshTokenFromCookie
+                : (request != null ? request.getRefreshToken() : null);
+
+        if (tokenToRevoke != null && !tokenToRevoke.isBlank()) {
+            authService.logout(tokenToRevoke);
         }
-        return ResponseEntity.ok(ApiResponse.success(null, "Logged out successfully"));
+
+        ResponseCookie cleanCookie = cookieUtils.createCleanRefreshTokenCookie();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cleanCookie.toString())
+                .body(ApiResponse.success(null, "Logged out successfully"));
     }
 
     @GetMapping("/profile")

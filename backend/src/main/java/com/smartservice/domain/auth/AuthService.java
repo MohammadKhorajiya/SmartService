@@ -147,14 +147,39 @@ public class AuthService {
 
     @Transactional
     public AuthResponse refreshToken(RefreshTokenRequest request) {
-        RefreshToken refreshToken = refreshTokenRepository.findByTokenHash(request.getRefreshToken())
-                .orElseThrow(() -> new BusinessRuleException("Invalid refresh token", "INVALID_REFRESH_TOKEN"));
+        return refreshToken(request != null ? request.getRefreshToken() : null);
+    }
 
-        if (refreshToken.isRevoked() || refreshToken.getExpiryDate().isBefore(Instant.now())) {
-            throw new BusinessRuleException("Refresh token is expired or revoked", "EXPIRED_REFRESH_TOKEN");
+    @Transactional
+    public AuthResponse refreshToken(String refreshTokenStr) {
+        if (refreshTokenStr == null || refreshTokenStr.trim().isEmpty()) {
+            throw new BusinessRuleException("Refresh token is required", "MISSING_REFRESH_TOKEN");
         }
 
+        RefreshToken refreshToken = refreshTokenRepository.findByTokenHash(refreshTokenStr.trim())
+                .orElseThrow(() -> new BusinessRuleException("Invalid refresh token", "INVALID_REFRESH_TOKEN"));
+
+        // REUSE DETECTION / COMPROMISE ALERT:
+        // If a revoked refresh token is presented, revoke the entire token family for that user
+        if (refreshToken.isRevoked()) {
+            User user = refreshToken.getUser();
+            refreshTokenRepository.deleteByUser(user);
+            throw new BusinessRuleException("Security alert: Revoked refresh token reuse detected. Session terminated.", "TOKEN_REUSE_DETECTED");
+        }
+
+        if (refreshToken.getExpiryDate().isBefore(Instant.now())) {
+            refreshToken.setRevoked(true);
+            refreshTokenRepository.save(refreshToken);
+            throw new BusinessRuleException("Refresh token is expired", "EXPIRED_REFRESH_TOKEN");
+        }
+
+        // ROTATION: Revoke current token and issue a new refresh token
+        refreshToken.setRevoked(true);
+        refreshTokenRepository.save(refreshToken);
+
         User user = refreshToken.getUser();
+        RefreshToken newRefreshToken = createRefreshToken(user);
+
         String newAccessToken = tokenProvider.generateAccessTokenFromEmail(user.getEmail(), user.getId(), user.getRole().name());
 
         Long customerId = customerRepository.findByUserId(user.getId()).map(Customer::getId).orElse(null);
@@ -162,7 +187,7 @@ public class AuthService {
 
         return AuthResponse.builder()
                 .accessToken(newAccessToken)
-                .refreshToken(refreshToken.getTokenHash())
+                .refreshToken(newRefreshToken.getTokenHash())
                 .tokenType("Bearer")
                 .userId(user.getId())
                 .email(user.getEmail())
@@ -259,9 +284,6 @@ public class AuthService {
     }
 
     private RefreshToken createRefreshToken(User user) {
-        // Delete previous active tokens for clean state
-        refreshTokenRepository.deleteByUser(user);
-
         RefreshToken token = RefreshToken.builder()
                 .user(user)
                 .tokenHash(UUID.randomUUID().toString())

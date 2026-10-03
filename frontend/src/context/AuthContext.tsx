@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AuthResponse, Role } from '../types';
-import api from '../api/client';
+import api, { setAccessToken } from '../api/client';
 
 interface AuthContextType {
   user: {
@@ -25,16 +25,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('authUser');
-    const token = localStorage.getItem('accessToken');
-    if (savedUser && token) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (e) {
-        localStorage.clear();
-      }
-    }
-    setIsLoading(false);
+    // Clear legacy localStorage token artifacts for backward compatibility & migration
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('authUser');
+
+    // Perform silent refresh using HttpOnly cookie to rehydrate session on page load/reopen
+    api
+      .post('/auth/refresh')
+      .then((res) => {
+        if (res.data?.success && res.data?.data) {
+          const authData: AuthResponse = res.data.data;
+          setAccessToken(authData.accessToken);
+          setUser({
+            userId: authData.userId,
+            email: authData.email,
+            fullName: authData.fullName,
+            role: authData.role,
+            customerId: authData.customerId,
+            technicianId: authData.technicianId,
+          });
+        } else {
+          setAccessToken(null);
+          setUser(null);
+        }
+      })
+      .catch(() => {
+        setAccessToken(null);
+        setUser(null);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, []);
 
   const login = (authData: AuthResponse) => {
@@ -46,29 +68,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       customerId: authData.customerId,
       technicianId: authData.technicianId,
     };
-    localStorage.setItem('accessToken', authData.accessToken);
-    localStorage.setItem('refreshToken', authData.refreshToken);
-    localStorage.setItem('authUser', JSON.stringify(userData));
+    setAccessToken(authData.accessToken);
     setUser(userData);
   };
 
   const updateUser = (updatedFields: Partial<NonNullable<AuthContextType['user']>>) => {
     setUser((prev) => {
       if (!prev) return null;
-      const updated = { ...prev, ...updatedFields };
-      localStorage.setItem('authUser', JSON.stringify(updated));
-      return updated;
+      return { ...prev, ...updatedFields };
     });
   };
 
   const logout = () => {
-    const refreshToken = localStorage.getItem('refreshToken');
-    if (refreshToken) {
-      api.post('/auth/logout', { refreshToken }).catch(() => {});
-    }
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('authUser');
+    api.post('/auth/logout').catch(() => {});
+    setAccessToken(null);
     setUser(null);
   };
 
