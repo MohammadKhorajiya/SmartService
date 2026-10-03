@@ -24,6 +24,17 @@ public class ProductionEnvironmentValidator {
         validateProperty("spring.datasource.username", "DATABASE_USERNAME");
         validateProperty("spring.datasource.password", "DATABASE_PASSWORD");
         validateProperty("app.jwt.secret", "JWT_SECRET");
+        validateProperty("app.payment.key-id", "PAYMENT_KEY_ID");
+        validateProperty("app.payment.key-secret", "PAYMENT_KEY_SECRET");
+
+        String paymentKeyId = environment.getProperty("app.payment.key-id");
+        String paymentKeySecret = environment.getProperty("app.payment.key-secret");
+        if (paymentKeyId != null && paymentKeyId.toLowerCase().contains("rzp_test_mockkeyid")) {
+            throw new IllegalStateException("CRITICAL PRODUCTION CONFIGURATION ERROR: Production profile cannot use mock payment key ID: " + paymentKeyId);
+        }
+        if (paymentKeySecret != null && paymentKeySecret.toLowerCase().contains("mockkeysecret")) {
+            throw new IllegalStateException("CRITICAL PRODUCTION CONFIGURATION ERROR: Production profile cannot use mock payment key secret: " + paymentKeySecret);
+        }
 
         String dbUrl = environment.getProperty("spring.datasource.url");
         if (dbUrl != null) {

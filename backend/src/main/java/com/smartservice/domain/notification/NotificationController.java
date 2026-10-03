@@ -12,6 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.data.domain.Sort;
+
 @RestController
 @RequestMapping("/api/v1/notifications")
 @RequiredArgsConstructor
@@ -23,7 +25,8 @@ public class NotificationController {
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get user notifications")
-    public ResponseEntity<ApiResponse<PageResponse<NotificationDTO>>> getNotifications(@PageableDefault(size = 10) Pageable pageable) {
+    public ResponseEntity<ApiResponse<PageResponse<NotificationDTO>>> getNotifications(
+            @PageableDefault(page = 0, size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         PageResponse<NotificationDTO> page = notificationService.getUserNotifications(pageable);
         return ResponseEntity.ok(ApiResponse.success(page));
     }
