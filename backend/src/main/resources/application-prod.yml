@@ -44,7 +44,7 @@ app:
     access-token-expiration-ms: ${JWT_ACCESS_EXPIRATION:900000}
     refresh-token-expiration-ms: ${JWT_REFRESH_EXPIRATION:604800000}
   cors:
-    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173}
+    allowed-origins: ${ALLOWED_ORIGINS:https://smartservice-tau.vercel.app}
   payment:
     key-id: ${PAYMENT_KEY_ID:rzp_test_mockKeyId}
     key-secret: ${PAYMENT_KEY_SECRET:mockKeySecret}

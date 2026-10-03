@@ -15,6 +15,8 @@ public class UpdateProfileRequest {
 
     private String address;
 
+    private String currentPassword;
+
     @Size(min = 6, message = "New password must be at least 6 characters")
     private String newPassword;
 }

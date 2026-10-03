@@ -1,6 +1,8 @@
 package com.smartservice.common.exception;
 
 import com.smartservice.common.dto.ApiResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -13,8 +15,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @Value("${spring.profiles.active:dev}")
+    private String activeProfile;
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleResourceNotFound(ResourceNotFoundException ex) {
@@ -71,10 +77,15 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
-        ex.printStackTrace();
+        log.error("Unhandled internal server exception", ex);
+
+        boolean isProd = "prod".equalsIgnoreCase(activeProfile) || "production".equalsIgnoreCase(activeProfile);
+        String clientMessage = isProd
+                ? "An internal server error occurred. Please contact support if the problem persists."
+                : "An unexpected error occurred: " + ex.getMessage();
+
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("An unexpected error occurred: " + ex.getMessage(), "INTERNAL_SERVER_ERROR"));
+                .body(ApiResponse.error(clientMessage, "INTERNAL_SERVER_ERROR"));
     }
-
 }

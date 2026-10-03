@@ -15,6 +15,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class AuthenticationIntegrationTest extends BaseIntegrationTest {
@@ -150,7 +151,68 @@ class AuthenticationIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("7. Unauthenticated access to protected endpoints returns 401 Unauthorized")
+    @DisplayName("7. Profile password update fails without correct current password")
+    void testProfilePasswordUpdateFailsWithoutCorrectCurrentPassword() throws Exception {
+        RegisterRequest regReq = new RegisterRequest();
+        regReq.setEmail("pwd.user@smartservice.com");
+        regReq.setPassword("Password@123");
+        regReq.setFullName("Password User");
+        regReq.setRole(Role.CUSTOMER);
+
+        MvcResult regResult = mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(regReq)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String body = regResult.getResponse().getContentAsString();
+        String token = objectMapper.readTree(body).path("data").path("accessToken").asText();
+
+        com.smartservice.domain.auth.dto.UpdateProfileRequest updateReq = new com.smartservice.domain.auth.dto.UpdateProfileRequest();
+        updateReq.setFullName("Password User");
+        updateReq.setCurrentPassword("WrongPassword");
+        updateReq.setNewPassword("NewPassword@123");
+
+        mockMvc.perform(put("/api/v1/auth/profile")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateReq)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", is("INVALID_CURRENT_PASSWORD")));
+    }
+
+    @Test
+    @DisplayName("8. Profile password update succeeds with valid current password")
+    void testProfilePasswordUpdateSucceedsWithValidCurrentPassword() throws Exception {
+        RegisterRequest regReq = new RegisterRequest();
+        regReq.setEmail("pwd.success@smartservice.com");
+        regReq.setPassword("Password@123");
+        regReq.setFullName("Password Success User");
+        regReq.setRole(Role.CUSTOMER);
+
+        MvcResult regResult = mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(regReq)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String body = regResult.getResponse().getContentAsString();
+        String token = objectMapper.readTree(body).path("data").path("accessToken").asText();
+
+        com.smartservice.domain.auth.dto.UpdateProfileRequest updateReq = new com.smartservice.domain.auth.dto.UpdateProfileRequest();
+        updateReq.setFullName("Password Success User");
+        updateReq.setCurrentPassword("Password@123");
+        updateReq.setNewPassword("NewPassword@123");
+
+        mockMvc.perform(put("/api/v1/auth/profile")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateReq)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("9. Unauthenticated access to protected endpoints returns 401 Unauthorized")
     void testUnauthenticatedAccessRejected() throws Exception {
         mockMvc.perform(get("/api/v1/customers"))
                 .andExpect(status().isUnauthorized());

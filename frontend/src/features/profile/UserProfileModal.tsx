@@ -17,6 +17,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -24,6 +25,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
   useEffect(() => {
     if (isOpen) {
       fetchProfile();
+      setCurrentPassword('');
+      setNewPassword('');
     }
   }, [isOpen]);
 
@@ -44,12 +47,18 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (newPassword.trim() && !currentPassword.trim()) {
+      alert('Current password is required to change password.');
+      return;
+    }
+
     setIsSaving(true);
     try {
       const res = await api.put('/auth/profile', {
         fullName,
         phone,
         address,
+        currentPassword: currentPassword.trim() || undefined,
         newPassword: newPassword.trim() || undefined,
       });
 
@@ -59,6 +68,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
       }
 
       alert('Profile updated successfully!');
+      setCurrentPassword('');
       setNewPassword('');
       onClose();
     } catch (err: any) {
@@ -123,10 +133,16 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
             />
           </div>
 
-          <div className="pt-2 border-t border-slate-100">
+          <div className="pt-2 border-t border-slate-100 space-y-3">
             <label className="block font-semibold text-slate-700 mb-1">
               Change Password <span className="text-slate-400 font-normal">(Leave blank to keep current password)</span>
             </label>
+            <Input
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              placeholder="Current password (required if setting new password)"
+            />
             <Input
               type="password"
               value={newPassword}

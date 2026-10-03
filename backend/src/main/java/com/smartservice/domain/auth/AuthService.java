@@ -255,6 +255,12 @@ public class AuthService {
         }
 
         if (request.getNewPassword() != null && !request.getNewPassword().trim().isEmpty()) {
+            if (request.getCurrentPassword() == null || request.getCurrentPassword().trim().isEmpty()) {
+                throw new BusinessRuleException("Current password is required to change password", "INVALID_CURRENT_PASSWORD");
+            }
+            if (!passwordEncoder.matches(request.getCurrentPassword().trim(), user.getPasswordHash())) {
+                throw new BusinessRuleException("Current password is incorrect", "INVALID_CURRENT_PASSWORD");
+            }
             user.setPasswordHash(passwordEncoder.encode(request.getNewPassword().trim()));
         }
 
