@@ -147,7 +147,7 @@ class AuthenticationIntegrationTest extends BaseIntegrationTest {
         // Attempting to reuse initialCookie (now revoked) should trigger reuse detection error
         mockMvc.perform(post("/api/v1/auth/refresh").cookie(initialCookie))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errorCode", is("TOKEN_REUSE_DETECTED")));
+                .andExpect(jsonPath("$.code", is("TOKEN_REUSE_DETECTED")));
     }
 
     @Test
@@ -216,5 +216,27 @@ class AuthenticationIntegrationTest extends BaseIntegrationTest {
     void testUnauthenticatedAccessRejected() throws Exception {
         mockMvc.perform(get("/api/v1/customers"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("10. State-changing request with XSRF-TOKEN cookie but missing X-CSRF-Token header returns 403 Forbidden")
+    void testCsrfValidationFailure() throws Exception {
+        jakarta.servlet.http.Cookie csrfCookie = new jakarta.servlet.http.Cookie("XSRF-TOKEN", "test-csrf-token");
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .cookie(csrfCookie))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code", is("CSRF_ERROR")));
+    }
+
+    @Test
+    @DisplayName("11. State-changing request with XSRF-TOKEN cookie and matching X-CSRF-Token header passes CSRF validation")
+    void testCsrfValidationSuccess() throws Exception {
+        jakarta.servlet.http.Cookie csrfCookie = new jakarta.servlet.http.Cookie("XSRF-TOKEN", "test-csrf-token");
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .cookie(csrfCookie)
+                        .header("X-CSRF-Token", "test-csrf-token"))
+                .andExpect(status().isBadRequest());
     }
 }

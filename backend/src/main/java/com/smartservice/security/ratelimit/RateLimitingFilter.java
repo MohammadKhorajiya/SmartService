@@ -28,11 +28,16 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     @Value("${app.rate-limit.auth.requests-per-minute:20}")
     private int requestsPerMinute;
 
+    @Value("${app.rate-limit.auth.refresh-requests-per-minute:10}")
+    private int refreshRequestsPerMinute;
+
     private final ConcurrentHashMap<String, RequestCounter> requestCounts = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, RequestCounter> refreshRequestCounts = new ConcurrentHashMap<>();
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     public void reset() {
         requestCounts.clear();
+        refreshRequestCounts.clear();
     }
 
     private static class RequestCounter {
@@ -49,7 +54,15 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     protected void doFilterInternal(@NonNull HttpServletRequest request,
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
-        if (!enabled || !isAuthEndpoint(request)) {
+        if (!enabled) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        boolean isRefresh = isRefreshEndpoint(request);
+        boolean isAuth = isGeneralAuthEndpoint(request);
+
+        if (!isRefresh && !isAuth) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -57,42 +70,77 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         String clientIp = getClientIp(request);
         long currentEpochMinute = System.currentTimeMillis() / 60000;
 
-        RequestCounter counter = requestCounts.compute(clientIp, (ip, existingCounter) -> {
-            if (existingCounter == null || existingCounter.windowStartEpochMinute != currentEpochMinute) {
-                return new RequestCounter(currentEpochMinute);
+        if (isRefresh) {
+            RequestCounter counter = refreshRequestCounts.compute(clientIp, (ip, existingCounter) -> {
+                if (existingCounter == null || existingCounter.windowStartEpochMinute != currentEpochMinute) {
+                    return new RequestCounter(currentEpochMinute);
+                }
+                existingCounter.count.incrementAndGet();
+                return existingCounter;
+            });
+
+            if (refreshRequestCounts.size() > 10000) {
+                refreshRequestCounts.entrySet().removeIf(entry -> entry.getValue().windowStartEpochMinute < currentEpochMinute);
             }
-            existingCounter.count.incrementAndGet();
-            return existingCounter;
-        });
 
-        // Periodic cleanup if map grows too large
-        if (requestCounts.size() > 10000) {
-            requestCounts.entrySet().removeIf(entry -> entry.getValue().windowStartEpochMinute < currentEpochMinute);
-        }
+            if (counter.count.get() > refreshRequestsPerMinute) {
+                sendRateLimitResponse(response, "Too many token refresh attempts. Please try again later.");
+                return;
+            }
+        } else {
+            RequestCounter counter = requestCounts.compute(clientIp, (ip, existingCounter) -> {
+                if (existingCounter == null || existingCounter.windowStartEpochMinute != currentEpochMinute) {
+                    return new RequestCounter(currentEpochMinute);
+                }
+                existingCounter.count.incrementAndGet();
+                return existingCounter;
+            });
 
-        if (counter.count.get() > requestsPerMinute) {
-            response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
-            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-            ApiResponse<Void> errorResponse = ApiResponse.error(
-                    "Too many authentication attempts. Please try again later.",
-                    "TOO_MANY_REQUESTS"
-            );
-            response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
-            return;
+            if (requestCounts.size() > 10000) {
+                requestCounts.entrySet().removeIf(entry -> entry.getValue().windowStartEpochMinute < currentEpochMinute);
+            }
+
+            if (counter.count.get() > requestsPerMinute) {
+                sendRateLimitResponse(response, "Too many authentication attempts. Please try again later.");
+                return;
+            }
         }
 
         filterChain.doFilter(request, response);
     }
 
-    private boolean isAuthEndpoint(HttpServletRequest request) {
+    private void sendRateLimitResponse(HttpServletResponse response, String message) throws IOException {
+        response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        ApiResponse<Void> errorResponse = ApiResponse.error(
+                message,
+                "TOO_MANY_REQUESTS"
+        );
+        response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
+    }
+
+    private boolean isRefreshEndpoint(HttpServletRequest request) {
         if (!"POST".equalsIgnoreCase(request.getMethod())) {
             return false;
         }
+        String path = getPath(request);
+        return "/api/v1/auth/refresh".equals(path);
+    }
+
+    private boolean isGeneralAuthEndpoint(HttpServletRequest request) {
+        if (!"POST".equalsIgnoreCase(request.getMethod())) {
+            return false;
+        }
+        String path = getPath(request);
+        return "/api/v1/auth/login".equals(path) || "/api/v1/auth/register".equals(path);
+    }
+
+    private String getPath(HttpServletRequest request) {
         String path = request.getServletPath();
         if (!StringUtils.hasText(path)) {
             path = request.getRequestURI();
         }
-        return "/api/v1/auth/login".equals(path) || "/api/v1/auth/register".equals(path);
+        return path;
     }
 
     private String getClientIp(HttpServletRequest request) {

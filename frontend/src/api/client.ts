@@ -16,11 +16,26 @@ const api = axios.create({
   withCredentials: true,
 });
 
+const getCookie = (name: string): string | null => {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(new RegExp('(^|; )' + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + '=([^;]*)'));
+  return match ? decodeURIComponent(match[2]) : null;
+};
+
 api.interceptors.request.use(
   (config) => {
     if (inMemoryToken && config.headers) {
       config.headers.Authorization = `Bearer ${inMemoryToken}`;
     }
+
+    const method = config.method?.toUpperCase();
+    if (method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+      const csrfToken = getCookie('XSRF-TOKEN');
+      if (csrfToken && config.headers) {
+        config.headers['X-CSRF-Token'] = csrfToken;
+      }
+    }
+
     return config;
   },
   (error) => Promise.reject(error)

@@ -31,3 +31,6 @@ app:
     auth:
       enabled: ${AUTH_RATE_LIMIT_ENABLED:true}
       requests-per-minute: ${AUTH_RATE_LIMIT_RPM:20}
+      refresh-requests-per-minute: ${AUTH_REFRESH_RATE_LIMIT_RPM:10}
+  jwt:
+    revoked-token-retention-days: ${REVOKED_TOKEN_RETENTION_DAYS:30}

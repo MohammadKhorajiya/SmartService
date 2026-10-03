@@ -85,4 +85,21 @@ class ActuatorAndRateLimitIntegrationTest extends BaseIntegrationTest {
                         .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    @DisplayName("5. Refresh endpoint rate limiting triggers HTTP 429 after 10 requests")
+    void testRefreshRateLimiting() throws Exception {
+        String testIp = "192.168.1.205";
+
+        for (int i = 0; i < 10; i++) {
+            mockMvc.perform(post("/api/v1/auth/refresh")
+                            .header("X-Forwarded-For", testIp))
+                    .andExpect(status().isBadRequest());
+        }
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .header("X-Forwarded-For", testIp))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.code", is("TOO_MANY_REQUESTS")));
+    }
 }

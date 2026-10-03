@@ -25,24 +25,28 @@ public class AuthController {
     private final CookieUtils cookieUtils;
 
     @PostMapping("/login")
-    @Operation(summary = "Authenticate user and issue JWT tokens with HttpOnly cookie")
+    @Operation(summary = "Authenticate user and issue JWT tokens with HttpOnly cookie and CSRF cookie")
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
-        ResponseCookie cookie = cookieUtils.createRefreshTokenCookie(response.getRefreshToken());
+        ResponseCookie refreshCookie = cookieUtils.createRefreshTokenCookie(response.getRefreshToken());
+        ResponseCookie csrfCookie = cookieUtils.createCsrfTokenCookie(cookieUtils.generateCsrfToken());
         response.setRefreshToken(null);
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, csrfCookie.toString())
                 .body(ApiResponse.success(response, "Login successful"));
     }
 
     @PostMapping("/register")
-    @Operation(summary = "Register new customer or user account with HttpOnly cookie")
+    @Operation(summary = "Register new customer or user account with HttpOnly cookie and CSRF cookie")
     public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
         AuthResponse response = authService.register(request);
-        ResponseCookie cookie = cookieUtils.createRefreshTokenCookie(response.getRefreshToken());
+        ResponseCookie refreshCookie = cookieUtils.createRefreshTokenCookie(response.getRefreshToken());
+        ResponseCookie csrfCookie = cookieUtils.createCsrfTokenCookie(cookieUtils.generateCsrfToken());
         response.setRefreshToken(null);
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, csrfCookie.toString())
                 .body(ApiResponse.success(response, "User registered successfully"));
     }
 
@@ -57,16 +61,18 @@ public class AuthController {
                 : (request != null ? request.getRefreshToken() : null);
 
         AuthResponse response = authService.refreshToken(tokenToRefresh);
-        ResponseCookie newCookie = cookieUtils.createRefreshTokenCookie(response.getRefreshToken());
+        ResponseCookie newRefreshCookie = cookieUtils.createRefreshTokenCookie(response.getRefreshToken());
+        ResponseCookie newCsrfCookie = cookieUtils.createCsrfTokenCookie(cookieUtils.generateCsrfToken());
         response.setRefreshToken(null);
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, newCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, newRefreshCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, newCsrfCookie.toString())
                 .body(ApiResponse.success(response, "Token refreshed successfully"));
     }
 
     @PostMapping("/logout")
-    @Operation(summary = "Revoke user refresh token and clear HttpOnly cookie")
+    @Operation(summary = "Revoke user refresh token and clear session cookies")
     public ResponseEntity<ApiResponse<Void>> logout(
             @CookieValue(name = CookieUtils.REFRESH_TOKEN_COOKIE_NAME, required = false) String refreshTokenFromCookie,
             @RequestBody(required = false) RefreshTokenRequest request) {
@@ -79,9 +85,11 @@ public class AuthController {
             authService.logout(tokenToRevoke);
         }
 
-        ResponseCookie cleanCookie = cookieUtils.createCleanRefreshTokenCookie();
+        ResponseCookie cleanRefreshCookie = cookieUtils.createCleanRefreshTokenCookie();
+        ResponseCookie cleanCsrfCookie = cookieUtils.createCleanCsrfTokenCookie();
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, cleanCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, cleanRefreshCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, cleanCsrfCookie.toString())
                 .body(ApiResponse.success(null, "Logged out successfully"));
     }
 
