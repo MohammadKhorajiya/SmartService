@@ -75,7 +75,15 @@ public class GlobalExceptionHandler {
                         .build());
     }
 
-    @ExceptionHandler(Exception.class)
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadable(org.springframework.http.converter.HttpMessageNotReadableException ex) {
+        // Return a clean 400 Bad Request without exposing internal details
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error("Required request body is missing or malformed", "MALFORMED_REQUEST_BODY"));
+    }
+
+
     public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
         log.error("Unhandled internal server exception", ex);
 

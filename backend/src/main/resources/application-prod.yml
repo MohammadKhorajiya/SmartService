@@ -43,11 +43,13 @@ app:
     secret: ${JWT_SECRET}
     access-token-expiration-ms: ${JWT_ACCESS_EXPIRATION:900000}
     refresh-token-expiration-ms: ${JWT_REFRESH_EXPIRATION:604800000}
+    cookie-secure: true
+    cookie-same-site: None
   cors:
     allowed-origins: ${ALLOWED_ORIGINS:https://smartservice-tau.vercel.app}
   payment:
-    key-id: ${PAYMENT_KEY_ID:rzp_test_mockKeyId}
-    key-secret: ${PAYMENT_KEY_SECRET:mockKeySecret}
+    key-id: ${PAYMENT_KEY_ID:}
+    key-secret: ${PAYMENT_KEY_SECRET:}
 
 springdoc:
   api-docs:
