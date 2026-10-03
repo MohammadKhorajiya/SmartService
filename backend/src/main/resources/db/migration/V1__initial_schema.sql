@@ -286,11 +286,11 @@ CREATE TABLE audit_logs (
 -- SEED SEED DATA
 -- Default BCrypt Password hash for "Password@123":
 INSERT INTO users (email, password_hash, full_name, phone, role, status) VALUES
-('admin@smartservice.com', '$2a$10$3D8C7VD0nqAXpexkD0SptuuFl.5GAgvdYPXSk.wDZebe5cD.pnhk.', 'System Administrator', '+18005550199', 'ADMIN', 'ACTIVE'),
-('manager@smartservice.com', '$2a$10$3D8C7VD0nqAXpexkD0SptuuFl.5GAgvdYPXSk.wDZebe5cD.pnhk.', 'Service Manager', '+18005550198', 'MANAGER', 'ACTIVE'),
-('tech.alex@smartservice.com', '$2a$10$3D8C7VD0nqAXpexkD0SptuuFl.5GAgvdYPXSk.wDZebe5cD.pnhk.', 'Alex Technician', '+18005550197', 'TECHNICIAN', 'ACTIVE'),
-('staff@smartservice.com', '$2a$10$3D8C7VD0nqAXpexkD0SptuuFl.5GAgvdYPXSk.wDZebe5cD.pnhk.', 'Front Desk Staff', '+18005550196', 'STAFF', 'ACTIVE'),
-('customer.john@gmail.com', '$2a$10$3D8C7VD0nqAXpexkD0SptuuFl.5GAgvdYPXSk.wDZebe5cD.pnhk.', 'John Doe Customer', '+18005550195', 'CUSTOMER', 'ACTIVE');
+('admin@smartservice.com', '$2a$10$8.UnVuG9HHgffUDAlk8qfOUVGkqRzgVym50cr0qlmCDAhK36Z8wgy', 'System Administrator', '+18005550199', 'ADMIN', 'ACTIVE'),
+('manager@smartservice.com', '$2a$10$8.UnVuG9HHgffUDAlk8qfOUVGkqRzgVym50cr0qlmCDAhK36Z8wgy', 'Service Manager', '+18005550198', 'MANAGER', 'ACTIVE'),
+('tech.alex@smartservice.com', '$2a$10$8.UnVuG9HHgffUDAlk8qfOUVGkqRzgVym50cr0qlmCDAhK36Z8wgy', 'Alex Technician', '+18005550197', 'TECHNICIAN', 'ACTIVE'),
+('staff@smartservice.com', '$2a$10$8.UnVuG9HHgffUDAlk8qfOUVGkqRzgVym50cr0qlmCDAhK36Z8wgy', 'Front Desk Staff', '+18005550196', 'STAFF', 'ACTIVE'),
+('customer.john@gmail.com', '$2a$10$8.UnVuG9HHgffUDAlk8qfOUVGkqRzgVym50cr0qlmCDAhK36Z8wgy', 'John Doe Customer', '+18005550195', 'CUSTOMER', 'ACTIVE');
 
 INSERT INTO customers (user_id, name, email, phone, address) VALUES
 (5, 'John Doe Customer', 'customer.john@gmail.com', '+18005550195', '742 Evergreen Terrace, Springfield');
