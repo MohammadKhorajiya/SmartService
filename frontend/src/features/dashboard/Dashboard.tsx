@@ -65,10 +65,10 @@ export const Dashboard: React.FC = () => {
               Welcome back, <span className="font-semibold text-slate-700">{user.fullName}</span>! Manage your repair requests and device trackings online.
             </p>
           </div>
-          <div className="flex items-center space-x-2 flex-nowrap shrink-0">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setIsAIEstimatorOpen(true)}
-              className="inline-flex items-center space-x-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-xs font-bold px-3 py-2 rounded-xl shadow-sm transition-all cursor-pointer whitespace-nowrap"
+              className="inline-flex items-center space-x-1.5 min-h-[44px] bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-xs font-bold px-3 py-2 rounded-xl shadow-sm transition-all cursor-pointer whitespace-nowrap"
               title="Get AI Smart Repair Quote"
             >
               <Sparkles className="w-3.5 h-3.5 fill-current animate-bounce" />
@@ -76,7 +76,7 @@ export const Dashboard: React.FC = () => {
             </button>
             <button
               onClick={() => setIsWarrantyOpen(true)}
-              className="inline-flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-amber-300 border border-slate-700/60 text-xs font-semibold px-3 py-2 rounded-xl shadow-sm transition-colors cursor-pointer whitespace-nowrap"
+              className="inline-flex items-center space-x-1.5 min-h-[44px] bg-slate-900 hover:bg-slate-800 text-amber-300 border border-slate-700/60 text-xs font-semibold px-3 py-2 rounded-xl shadow-sm transition-colors cursor-pointer whitespace-nowrap"
               title="View Digital Warranty Certificate"
             >
               <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
@@ -84,7 +84,7 @@ export const Dashboard: React.FC = () => {
             </button>
             <Link
               to="/service-requests"
-              className="inline-flex items-center space-x-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3.5 py-2 rounded-xl shadow-sm transition-colors whitespace-nowrap"
+              className="inline-flex items-center space-x-1.5 min-h-[44px] bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3.5 py-2 rounded-xl shadow-sm transition-colors whitespace-nowrap"
             >
               <PlusCircle className="w-3.5 h-3.5" />
               <span>Create Request</span>

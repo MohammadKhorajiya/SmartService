@@ -198,7 +198,7 @@ export const RepairJobList: React.FC = () => {
               setSelectedStatus(tab.value);
               setPage(0);
             }}
-            className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg whitespace-nowrap transition-colors ${
+            className={`px-3.5 py-2 min-h-[44px] text-xs font-semibold rounded-lg whitespace-nowrap transition-colors cursor-pointer ${
               selectedStatus === tab.value
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
