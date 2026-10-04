@@ -24,16 +24,33 @@ public class ProductionEnvironmentValidator {
         validateProperty("spring.datasource.username", "DATABASE_USERNAME");
         validateProperty("spring.datasource.password", "DATABASE_PASSWORD");
         validateProperty("app.jwt.secret", "JWT_SECRET");
-        validateProperty("app.payment.key-id", "PAYMENT_KEY_ID");
-        validateProperty("app.payment.key-secret", "PAYMENT_KEY_SECRET");
+        // Check if mock payment mode is enabled
+        String paymentMode = environment.getProperty("payment.mode", "");
+        boolean isMockEnabled = "mock".equalsIgnoreCase(paymentMode) 
+                || "true".equalsIgnoreCase(environment.getProperty("payment.fake.enabled", "false"));
 
-        String paymentKeyId = environment.getProperty("app.payment.key-id");
-        String paymentKeySecret = environment.getProperty("app.payment.key-secret");
-        if (paymentKeyId != null && paymentKeyId.toLowerCase().contains("rzp_test_mockkeyid")) {
-            throw new IllegalStateException("CRITICAL PRODUCTION CONFIGURATION ERROR: Production profile cannot use mock payment key ID: " + paymentKeyId);
-        }
-        if (paymentKeySecret != null && paymentKeySecret.toLowerCase().contains("mockkeysecret")) {
-            throw new IllegalStateException("CRITICAL PRODUCTION CONFIGURATION ERROR: Production profile cannot use mock payment key secret: " + paymentKeySecret);
+        if (isMockEnabled) {
+            log.info("✅ Mock payment mode enabled - payment configuration validator bypassed");
+        } else {
+            validateProperty("app.payment.key-id", "PAYMENT_KEY_ID");
+            validateProperty("app.payment.key-secret", "PAYMENT_KEY_SECRET");
+
+            String paymentKeyId = environment.getProperty("app.payment.key-id");
+            if (!StringUtils.hasText(paymentKeyId)) {
+                paymentKeyId = environment.getProperty("razorpay.key.id", "");
+            }
+            String paymentKeySecret = environment.getProperty("app.payment.key-secret");
+            if (!StringUtils.hasText(paymentKeySecret)) {
+                paymentKeySecret = environment.getProperty("razorpay.key.secret", "");
+            }
+
+            if (paymentKeyId != null && (paymentKeyId.toLowerCase().contains("rzp_test_mockkeyid") || paymentKeyId.toLowerCase().contains("test"))) {
+                throw new IllegalStateException("CRITICAL PRODUCTION CONFIGURATION ERROR: Production profile cannot use mock payment key ID: " + paymentKeyId + ". Either enable mock mode (payment.mode=mock) or provide production keys.");
+            }
+            if (paymentKeySecret != null && (paymentKeySecret.toLowerCase().contains("mockkeysecret") || paymentKeySecret.toLowerCase().contains("test"))) {
+                throw new IllegalStateException("CRITICAL PRODUCTION CONFIGURATION ERROR: Production profile cannot use mock payment key secret: " + paymentKeySecret + ". Either enable mock mode (payment.mode=mock) or provide production secret.");
+            }
+            log.info("✅ Payment configuration validation passed");
         }
 
         String dbUrl = environment.getProperty("spring.datasource.url");

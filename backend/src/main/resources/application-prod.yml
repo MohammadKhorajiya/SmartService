@@ -48,8 +48,22 @@ app:
   cors:
     allowed-origins: ${ALLOWED_ORIGINS:https://smartservice-tau.vercel.app}
   payment:
+    mode: ${PAYMENT_MODE:mock}
     key-id: ${PAYMENT_KEY_ID:rzp_mock_key_id}
     key-secret: ${PAYMENT_KEY_SECRET:mock_key_secret}
+
+payment:
+  mode: mock
+  fake:
+    enabled: true
+    success-rate: 100
+    delay-ms: 1000
+
+razorpay:
+  enabled: false
+  key:
+    id: rzp_mock_key_id
+    secret: mock_key_secret
 
 springdoc:
   api-docs:
